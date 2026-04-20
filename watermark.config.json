@@ -1,0 +1,12 @@
+{
+  "defaultTemplate": "standard",
+  "templates": {
+    "standard": {
+      "fontSize": 56,
+      "opacity": 0.12,
+      "rotation": 45,
+      "colorRgb": [0.6, 0.6, 0.6],
+      "position": "center"
+    }
+  }
+}
