@@ -11,7 +11,7 @@ npm install
 npm run build
 ```
 
-`postinstall` automatically downloads the bundled [Noto Sans CJK](https://github.com/googlefonts/noto-cjk) font (~30 MB) into `fonts/`. After that, any watermark text — including CJK characters — works without extra options.
+`postinstall` automatically downloads the bundled [Noto Sans CJK](https://github.com/notofonts/noto-cjk) font into `fonts/`. After that, common CJK watermark text works without extra options.
 
 ## CLI
 
@@ -25,7 +25,7 @@ Options:
 
 - `--input`: input PDF path, required
 - `--text`: single-line watermark text, required
-- `--output`: output PDF path, optional (defaults to `./output/<n>__watermarked__<text>.pdf`)
+- `--output`: output PDF path, optional
 - `--template`: template name, default `standard`
 - `--font`: custom font file path (overrides bundled font)
 - `--config`: config file path, optional
@@ -53,7 +53,7 @@ The bundled config already points to the downloaded CJK font:
 {
   "defaultTemplate": "standard",
   "defaultOutputDir": "./output",
-  "defaultFontPath": "./fonts/NotoSansCJK-Regular.ttc",
+  "defaultFontPath": "./fonts/NotoSansCJKsc-Regular.otf",
   "templates": {
     "standard": {
       "fontSize": 56,
@@ -151,13 +151,14 @@ Full input:
 ```
 
 > **`cwd` is required** — the MCP server resolves `watermark.config.json` and
-> `./fonts/NotoSansCJK-Regular.ttc` relative to the working directory.
+> `./fonts/NotoSansCJKsc-Regular.otf` relative to the working directory.
 
 ## Font resolution order
 
 1. `font_path` / `--font` argument (explicit override)
 2. `defaultFontPath` in `watermark.config.json` (bundled CJK font by default)
-3. Built-in Helvetica (ASCII-only fallback if font file is missing)
+3. Bundled package font auto-detected from `fonts/` when no config font is provided
+4. Built-in Helvetica for ASCII text when no custom or bundled font is available
 
 ## Errors
 

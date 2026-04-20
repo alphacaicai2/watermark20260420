@@ -13,11 +13,10 @@ import { get } from 'node:https';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FONTS_DIR = join(__dirname, '..', 'fonts');
-const FONT_PATH = join(FONTS_DIR, 'NotoSansCJK-Regular.ttc');
+const FONT_PATH = join(FONTS_DIR, 'NotoSansCJKsc-Regular.otf');
 
-// Hosted on GitHub Releases to avoid raw.githubusercontent.com size limits
 const FONT_URL =
-  'https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTC/NotoSansCJK-Regular.ttc';
+  'https://github.com/notofonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf';
 
 async function download(url, dest, redirectCount = 0) {
   if (redirectCount > 5) {
@@ -27,6 +26,10 @@ async function download(url, dest, redirectCount = 0) {
   return new Promise((resolve, reject) => {
     get(url, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {
+        if (!res.headers.location) {
+          return reject(new Error(`Redirect without location for ${url}`));
+        }
+
         return download(res.headers.location, dest, redirectCount + 1)
           .then(resolve)
           .catch(reject);
@@ -49,25 +52,22 @@ async function main() {
 
   mkdirSync(FONTS_DIR, { recursive: true });
 
-  console.log('[pdf-watermark] Downloading bundled CJK font (~30 MB)...');
+  console.log('[pdf-watermark] Downloading bundled CJK font...');
 
   try {
     await download(FONT_URL, FONT_PATH);
-    console.log('[pdf-watermark] Font downloaded successfully → fonts/NotoSansCJK-Regular.ttc');
+    console.log('[pdf-watermark] Font downloaded successfully -> fonts/NotoSansCJKsc-Regular.otf');
   } catch (err) {
-    // Non-fatal: tool still works for ASCII text with the built-in Helvetica font
-    console.warn(
-      '[pdf-watermark] Warning: Could not download bundled font. ' +
-      'Chinese/Japanese/Korean watermarks will require --font or defaultFontPath.\n' +
-      `  Reason: ${err.message}`
-    );
-    // Remove partial file if it exists
     try {
       if (existsSync(FONT_PATH)) {
         const { unlinkSync } = await import('node:fs');
         unlinkSync(FONT_PATH);
       }
-    } catch {}
+    } catch {
+      // Preserve the original download error below.
+    }
+
+    throw new Error(`Could not download bundled CJK font: ${err.message}`);
   }
 }
 

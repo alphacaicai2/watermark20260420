@@ -6,9 +6,8 @@ import { PDFDocument, StandardFonts, type PDFFont } from 'pdf-lib';
 import { WatermarkError } from '../core/types.js';
 import { uniqueCodePoints } from './text.js';
 
-// Bundled font shipped with the package (downloaded by postinstall)
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const BUNDLED_FONT_PATH = resolve(__dirname, '../../fonts/NotoSansCJK-Regular.ttc');
+const BUNDLED_FONT_FILE = 'NotoSansCJKsc-Regular.otf';
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
 export async function embedWatermarkFont(options: {
   pdfDoc: PDFDocument;
@@ -25,16 +24,30 @@ export async function embedWatermarkFont(options: {
   return font;
 }
 
-/** Returns the bundled font path if the file exists, otherwise undefined. */
 async function resolveBundledFont(): Promise<string | undefined> {
-  try {
-    if ((await stat(BUNDLED_FONT_PATH)).isFile()) {
-      return BUNDLED_FONT_PATH;
+  for (const fontPath of getBundledFontCandidates()) {
+    if (await isFile(fontPath)) {
+      return fontPath;
     }
-  } catch {
-    // Font not downloaded yet — fall through to Helvetica
   }
+
   return undefined;
+}
+
+function getBundledFontCandidates(): string[] {
+  return [
+    resolve(MODULE_DIR, '../fonts', BUNDLED_FONT_FILE),
+    resolve(MODULE_DIR, '../../fonts', BUNDLED_FONT_FILE),
+    resolve(process.cwd(), 'fonts', BUNDLED_FONT_FILE)
+  ];
+}
+
+async function isFile(filePath: string): Promise<boolean> {
+  try {
+    return (await stat(filePath)).isFile();
+  } catch {
+    return false;
+  }
 }
 
 async function embedCustomFont(pdfDoc: PDFDocument, fontPath: string): Promise<PDFFont> {

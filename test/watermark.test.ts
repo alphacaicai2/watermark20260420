@@ -38,12 +38,22 @@ describe('watermarkPdf', () => {
     expect((await stat(result.outputPath)).size).toBeGreaterThan(beforeBytes.length);
   });
 
-  it('rejects Chinese text without a compatible font', async () => {
+  it('adds a Chinese watermark with the bundled font', async () => {
     const inputPath = await makeFixture('source.pdf');
 
-    await expect(watermarkPdf({ inputPath, text: '仅供内部使用' })).rejects.toMatchObject({
-      code: 'FONT_UNSUPPORTED_CHARACTERS'
-    });
+    const result = await watermarkPdf({ inputPath, text: '仅供内部使用' });
+    const outputDoc = await PDFDocument.load(await readFile(result.outputPath));
+
+    expect(result).toMatchObject({ pageCount: 2, templateName: 'standard', success: true });
+    expect(outputDoc.getPageCount()).toBe(2);
+  });
+
+  it('rejects an explicit missing font path', async () => {
+    const inputPath = await makeFixture('source.pdf');
+
+    await expect(
+      watermarkPdf({ inputPath, text: '仅供内部使用', fontPath: 'missing-font.otf' })
+    ).rejects.toMatchObject({ code: 'FONT_NOT_FOUND' });
   });
 
   it.runIf(() => Boolean(chineseFontPath))('supports Chinese text with an explicit font', async () => {
