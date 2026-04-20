@@ -3,3 +3,13 @@ dist/
 coverage/
 *.log
 .DS_Store
+output/
+
+# Font binaries are downloaded by postinstall, not committed
+fonts/*.ttc
+fonts/*.ttf
+fonts/*.otf
+fonts/*.woff
+fonts/*.woff2
+# Keep the directory itself
+!fonts/.gitkeep

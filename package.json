@@ -8,6 +8,9 @@
   },
   "files": [
     "dist",
+    "fonts",
+    "scripts",
+    "watermark.config.json",
     "README.md"
   ],
   "main": "./dist/index.js",
@@ -28,7 +31,8 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "postinstall": "node scripts/postinstall.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.21.0",

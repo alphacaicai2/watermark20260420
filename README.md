@@ -2,6 +2,8 @@
 
 Fixed-template PDF text watermark tool for local scripts, CLI usage, and MCP clients.
 
+Chinese, Japanese, and Korean text work out of the box — no font configuration needed.
+
 ## Install
 
 ```bash
@@ -9,11 +11,13 @@ npm install
 npm run build
 ```
 
+`postinstall` automatically downloads the bundled [Noto Sans CJK](https://github.com/googlefonts/noto-cjk) font (~30 MB) into `fonts/`. After that, any watermark text — including CJK characters — works without extra options.
+
 ## CLI
 
 ```bash
+pdfwm add --input ./source.pdf --text "机密"
 pdfwm add --input ./source.pdf --text "CONFIDENTIAL" --output ./out.pdf
-pdfwm add --input ./source.pdf --text "For Kenji Only"
 pdfwm standard --input ./source.pdf --text "Demo Version"
 ```
 
@@ -21,17 +25,10 @@ Options:
 
 - `--input`: input PDF path, required
 - `--text`: single-line watermark text, required
-- `--output`: output PDF path, optional
+- `--output`: output PDF path, optional (defaults to `./output/<n>__watermarked__<text>.pdf`)
 - `--template`: template name, default `standard`
-- `--font`: custom font file path, required for Chinese or unsupported characters
+- `--font`: custom font file path (overrides bundled font)
 - `--config`: config file path, optional
-
-If `--output` is omitted, the tool writes a new PDF next to the input PDF unless
-`defaultOutputDir` is configured. Generated names follow:
-
-```text
-source.pdf -> source__watermarked__CONFIDENTIAL.pdf
-```
 
 ## NPM API
 
@@ -40,7 +37,7 @@ import { watermarkPdf } from 'pdf-fixed-watermark-tool';
 
 const result = await watermarkPdf({
   inputPath: './source.pdf',
-  text: 'CONFIDENTIAL',
+  text: '机密',           // CJK works out of the box
   outputPath: './out.pdf'
 });
 
@@ -49,14 +46,14 @@ console.log(result.outputPath);
 
 ## Config
 
-The CLI automatically reads `watermark.config.json` from the current working
-directory when present.
+The CLI automatically reads `watermark.config.json` from the current working directory.
+The bundled config already points to the downloaded CJK font:
 
 ```json
 {
   "defaultTemplate": "standard",
   "defaultOutputDir": "./output",
-  "defaultFontPath": "C:/Windows/Fonts/msyh.ttc",
+  "defaultFontPath": "./fonts/NotoSansCJK-Regular.ttc",
   "templates": {
     "standard": {
       "fontSize": 56,
@@ -69,6 +66,8 @@ directory when present.
 }
 ```
 
+You can override `defaultFontPath` with any `.ttf`, `.otf`, or `.ttc` file.
+
 ## MCP Server
 
 Run the stdio MCP server:
@@ -77,13 +76,18 @@ Run the stdio MCP server:
 node ./dist/mcp.js
 ```
 
-Tool name:
+Tool name: `add_pdf_watermark`
 
-```text
-add_pdf_watermark
+Minimum input (font is resolved automatically):
+
+```json
+{
+  "input_path": "./source.pdf",
+  "watermark_text": "机密"
+}
 ```
 
-Input:
+Full input:
 
 ```json
 {
@@ -91,16 +95,76 @@ Input:
   "watermark_text": "CONFIDENTIAL",
   "output_path": "./out.pdf",
   "template": "standard",
-  "font_path": "C:/Windows/Fonts/msyh.ttc"
+  "font_path": "/optional/custom/font.ttc"
 }
 ```
+
+### MCP config for Claude Desktop
+
+`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+`%APPDATA%\Claude\claude_desktop_config.json` (Windows)
+
+```json
+{
+  "mcpServers": {
+    "pdf-watermark": {
+      "command": "node",
+      "args": ["/path/to/watermark20260420/dist/mcp.js"],
+      "cwd": "/path/to/watermark20260420"
+    }
+  }
+}
+```
+
+### MCP config for Codex CLI
+
+`~/.codex/config.json`
+
+```json
+{
+  "mcpServers": {
+    "pdf-watermark": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["/path/to/watermark20260420/dist/mcp.js"],
+      "cwd": "/path/to/watermark20260420"
+    }
+  }
+}
+```
+
+### MCP config for Cline (VS Code)
+
+`settings.json`
+
+```json
+{
+  "cline.mcpServers": {
+    "pdf-watermark": {
+      "command": "node",
+      "args": ["/path/to/watermark20260420/dist/mcp.js"],
+      "cwd": "/path/to/watermark20260420",
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+> **`cwd` is required** — the MCP server resolves `watermark.config.json` and
+> `./fonts/NotoSansCJK-Regular.ttc` relative to the working directory.
+
+## Font resolution order
+
+1. `font_path` / `--font` argument (explicit override)
+2. `defaultFontPath` in `watermark.config.json` (bundled CJK font by default)
+3. Built-in Helvetica (ASCII-only fallback if font file is missing)
 
 ## Errors
 
 Failures are explicit. The API throws `WatermarkError` with a stable `code`.
 The CLI prints `CODE: message` and exits with code `1`.
 
-Common codes include:
+Common codes:
 
 - `INPUT_NOT_FOUND`
 - `INPUT_NOT_PDF`

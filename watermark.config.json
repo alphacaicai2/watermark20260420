@@ -1,5 +1,7 @@
 {
   "defaultTemplate": "standard",
+  "defaultOutputDir": "./output",
+  "defaultFontPath": "./fonts/NotoSansCJK-Regular.ttc",
   "templates": {
     "standard": {
       "fontSize": 56,
