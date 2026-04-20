@@ -4,6 +4,7 @@ coverage/
 *.log
 .DS_Store
 output/
+.data/
 
 # Font binaries are downloaded by postinstall, not committed
 fonts/*.ttc

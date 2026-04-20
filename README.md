@@ -70,7 +70,7 @@ You can override `defaultFontPath` with any `.ttf`, `.otf`, or `.ttc` file.
 
 ## MCP Server
 
-Run the stdio MCP server:
+Run the local stdio MCP server:
 
 ```bash
 node ./dist/mcp.js
@@ -98,6 +98,56 @@ Full input:
   "font_path": "/optional/custom/font.ttc"
 }
 ```
+
+## Remote MCP on Railway
+
+This project can also run as a remote Streamable HTTP MCP server on Railway.
+
+Required Railway variables:
+
+- `PDFWM_API_KEY`: bearer token required by `/mcp` and `/files`
+- `PUBLIC_BASE_URL`: optional public URL, for example `https://your-service.up.railway.app`
+
+Railway uses `npm start`, which runs:
+
+```bash
+node dist/remote.js
+```
+
+Remote MCP URL:
+
+```text
+https://your-service.up.railway.app/mcp
+```
+
+Remote Agent config:
+
+```json
+{
+  "mcpServers": {
+    "pdf-watermark": {
+      "type": "streamable-http",
+      "url": "https://your-service.up.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_PDFWM_API_KEY"
+      }
+    }
+  }
+}
+```
+
+Remote tool input uses a PDF URL because the Railway server cannot read local
+paths on your computer:
+
+```json
+{
+  "input_url": "https://example.com/source.pdf",
+  "watermark_text": "仅供内部使用"
+}
+```
+
+Successful remote calls return `download_url`. Download URLs are also protected
+by the same bearer token.
 
 ### MCP config for Claude Desktop
 

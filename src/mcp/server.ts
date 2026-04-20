@@ -5,11 +5,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { watermarkPdf, WatermarkError } from '../index.js';
+import {
+  createRemoteFileConfig,
+  createRemoteOutputPath,
+  downloadPdfFromUrl,
+  toDownloadUrl
+} from '../remote/http-files.js';
 
 const TOOL_NAME = 'add_pdf_watermark';
 
 const inputSchema = {
-  input_path: z.string(),
+  input_path: z.string().optional(),
+  input_url: z.string().url().optional(),
   watermark_text: z.string(),
   output_path: z.string().optional(),
   template: z.string().optional(),
@@ -17,19 +24,30 @@ const inputSchema = {
 };
 
 type AddPdfWatermarkInput = {
-  input_path: string;
+  input_path?: string;
+  input_url?: string;
   watermark_text: string;
   output_path?: string;
   template?: string;
   font_path?: string;
 };
 
-export async function handleAddPdfWatermark(input: AddPdfWatermarkInput) {
+type McpServerOptions = {
+  remote?: {
+    baseUrl: string;
+  };
+};
+
+export async function handleAddPdfWatermark(
+  input: AddPdfWatermarkInput,
+  options: McpServerOptions = {}
+) {
   try {
+    const resolvedInput = await resolveInput(input, options);
     const result = await watermarkPdf({
-      inputPath: input.input_path,
+      inputPath: resolvedInput.inputPath,
       text: input.watermark_text,
-      outputPath: input.output_path,
+      outputPath: resolvedInput.outputPath,
       templateName: input.template,
       fontPath: input.font_path
     });
@@ -37,6 +55,7 @@ export async function handleAddPdfWatermark(input: AddPdfWatermarkInput) {
     return toToolContent({
       status: 'success',
       output_path: result.outputPath,
+      download_url: resolvedInput.downloadUrl,
       page_count: result.pageCount,
       template: result.templateName
     });
@@ -45,7 +64,7 @@ export async function handleAddPdfWatermark(input: AddPdfWatermarkInput) {
   }
 }
 
-export function createMcpServer(): McpServer {
+export function createMcpServer(options: McpServerOptions = {}): McpServer {
   const server = new McpServer({ name: 'pdf-fixed-watermark-tool', version: '0.1.0' });
   server.registerTool(
     TOOL_NAME,
@@ -54,7 +73,7 @@ export function createMcpServer(): McpServer {
       description: 'Add a fixed-template text watermark to every page of a PDF.',
       inputSchema
     },
-    handleAddPdfWatermark
+    (input) => handleAddPdfWatermark(input, options)
   );
   return server;
 }
@@ -69,6 +88,21 @@ function toToolContent(value: Record<string, unknown>, isError = false) {
     isError,
     content: [{ type: 'text' as const, text: JSON.stringify(value, null, 2) }]
   };
+}
+
+async function resolveInput(input: AddPdfWatermarkInput, options: McpServerOptions) {
+  if (input.input_url && options.remote) {
+    const config = createRemoteFileConfig(options.remote.baseUrl);
+    const inputPath = await downloadPdfFromUrl(input.input_url, config);
+    const outputPath = input.output_path ?? (await createRemoteOutputPath(config));
+    return { inputPath, outputPath, downloadUrl: toDownloadUrl(outputPath, config) };
+  }
+
+  if (input.input_path) {
+    return { inputPath: input.input_path, outputPath: input.output_path, downloadUrl: undefined };
+  }
+
+  throw new Error('Either input_url or input_path is required');
 }
 
 function formatError(error: unknown): string {
